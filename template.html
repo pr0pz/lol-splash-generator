@@ -1,0 +1,38 @@
+<style>
+*{padding:0;margin:0;box-sizing:border-box;position:relative}
+html,body{width:100%;height:100%;-moz-osx-font-smoothing:grayscale;-webkit-font-smoothing:antialiased;overflow-x:hidden;background:#333}
+@keyframes scale {from{transform:scale(1)}to{transform:scale(1.25)}}
+
+#splash {
+	width: 100%;
+	height: 100%;
+	color: #fff;
+	font-size: 100px;
+	max-height: 100vh;
+	overflow: hidden;
+	font-family: 'Colombo Sans Font', sans-serif
+}
+
+#splash-art {
+	animation: scale 15s;
+	position: absolute;
+	inset: 0;
+	background-image:url(img/Pyke_45.jpg);
+	background-size: cover;
+	background-position: center;
+	transform: scale(1.25);
+}
+
+#splash-content {
+	position: absolute;
+	top:58vh;
+	left:13vw;
+	width: 50%;
+	z-index: 2;
+	transform: rotate(1.5deg);
+}
+</style>
+<div id="splash">
+	<div id="splash-art"></div>
+	<div id="splash-content">Pyke</div>
+</div>
