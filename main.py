@@ -69,7 +69,7 @@ def update_live_client_data() :
         response = requests.get( API_URL, verify=False )
         # Check if we get something
         if response.ok and response.json():
-            log( Fore.YELLOW + 'Status: ' + Fore.GREEN + str( response.status_code ) + ' / ' + response.reason + Style.RESET_ALL )
+            log( Fore.GREEN + 'Status: ' + Style.RESET_ALL + str( response.status_code ) + ' / ' + response.reason )
 
             if response.status_code != 404 and INTERVAL != INTERVAL_LONG:
                 player_data = get_player_data( response.json() )
@@ -233,11 +233,14 @@ def update_html( player_data ) :
 
         if html_data:
             # Search and replace
-            html_data = re.sub(r"url\((.*)\)", player_data['image_path'], html_data)
-            html_data = re.sub(r"<div id=\"splash-content\">(.*)<\/div>", player_data['champion_name'], html_data)
+            # We have to search first, since we only need the matched group to be replaced.
+            search = re.search( r'url\((.*)\)', html_data )
+            html_data = re.sub( search.group(1), player_data['image_path'], html_data )
+            search = re.search( r'<div id="splash-content">(.*)</div>', html_data )
+            html_data = re.sub( search.group(1), player_data['champion_name'], html_data )
 
             # Write new data to output file
-            stream = open( 'stream.html', 'w+' )
+            stream = open( 'template.html', 'w+' )
             stream.write( html_data )
             stream.close()
 
@@ -275,7 +278,7 @@ def log( s ):
 # Write debug file
 def debug( data ):
 	# Write json debug file
-	file = open( 'data.json', 'w' )
+	file = open( 'data.json', 'w+' )
 	file.write( str( data ) )
 	file.close()
 
