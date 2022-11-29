@@ -1,5 +1,7 @@
 """
 LoL Intro Splash HTML file (e.g. for Stream)
+
+v1.0.0
 """
 import time
 import requests  # for curl request

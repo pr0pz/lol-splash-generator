@@ -37,6 +37,8 @@ $ pip install requests colorama
 $ python main.py
 ```
 
+That's it!
+
 ### Found any Bugs?
 
 If you find any bugs/errors, feel free to [post an issue](https://github.com/pr0pz/obs-lol-splash-generator/issues).
@@ -44,3 +46,7 @@ If you find any bugs/errors, feel free to [post an issue](https://github.com/pr0
 ### License
 
 [![CC BY SA](https://img.shields.io/static/v1?label&message=CC%20BY%20SA&color=EE5B32&logo=creative-commons&logoColor=fff)](https://ko-fi.com/propz)
+
+_That's it!_
+
+___Be excellent to each other. And, Party on, dudes!___
