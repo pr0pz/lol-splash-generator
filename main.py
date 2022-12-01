@@ -1,7 +1,7 @@
 """
 LoL Intro Splash HTML file (e.g. for Stream)
 
-v1.0.0
+v1.1
 """
 import time
 import requests  # for curl request
@@ -24,11 +24,13 @@ Data Dragon Documentation: https://developer.riotgames.com/docs/lol#data-dragon
 """
 API_URL = 'https://127.0.0.1:2999/liveclientdata/allgamedata'
 LOL_VERSION = '12.22.1'
-#CDN_URL = 'https://cdn.communitydragon.org/' + LOL_VERSION + '/champion/{championName}'
-CDN_URL = 'https://ddragon.leagueoflegends.com/cdn/img/champion/'
+CDN_URL = 'https://ddragon.leagueoflegends.com/cdn/' + LOL_VERSION
+# Champ info: https://cdn.communitydragon.org/{LOL_VERSION}/champion/{championName}
 # https://ddragon.leagueoflegends.com/cdn/12.22.1/data/en_US/champion/Nautilus.json
-CDN_URL_JSON = 'https://ddragon.leagueoflegends.com/cdn/' + LOL_VERSION + '/data/en_US/champion/'
-CDN_SPLASH = 'splash/'
+CDN_URL_CHAMPION = CDN_URL + '/data/en_US/champion/'
+# Champ image: http://ddragon.leagueoflegends.com/cdn/img/champion/splash/{championName}_{skinNum}.jpg
+# http://ddragon.leagueoflegends.com/cdn/img/champion/splash/Nautilus_0.jpg
+CDN_URL_CHAMPION_IMAGE = 'https://ddragon.leagueoflegends.com/cdn/img/champion/splash/'
 IMAGE_FOLDER = 'img/'
 STATUS_MESSAGE = ''
 
@@ -71,10 +73,12 @@ def update_live_client_data() :
         response = requests.get( API_URL, verify=False )
         # Check if we get something
         if response.ok and response.json():
+            debug( response.json() )
             log( Fore.GREEN + 'Status: ' + Style.RESET_ALL + str( response.status_code ) + ' / ' + response.reason )
 
             if response.status_code != 404 and INTERVAL != INTERVAL_LONG:
                 player_data = get_player_data( response.json() )
+                player_data = get_champion_id( player_data )
                 player_data = get_proper_skinid( player_data )
                 player_data = save_splash_image( player_data )
                 update_html( player_data )
@@ -109,6 +113,7 @@ def get_player_data( game_data ):
 
     player_data = {
         'champion_name': '',
+        'champion_id': '',
         'skin_name': '',
         'skin_id': 0,
         'image_filename': '',
@@ -137,8 +142,34 @@ def get_player_data( game_data ):
                         log( Fore.GREEN + 'Using default skin: ' + Style.RESET_ALL + 'No skin name found.' )
 
                 else:
-                    debug( player_data )
+                    debug( game_data )
                     log( Fore.RED + 'Champion name not found: ' + Style.RESET_ALL + 'Check data.json for more information.' )
+                    exit()
+
+    return player_data
+
+
+# Get official champion id
+def get_champion_id( player_data ):
+
+    url = CDN_URL + '/data/en_US/champion.json'
+
+    # Get all champions
+    response = requests.get( url )
+
+    if response.ok and response.json():
+        champions = response.json()['data']
+
+        # Loop all champions and look for match
+        for champion_name in champions:
+            if champions[ champion_name ]['name'] == player_data['champion_name']:
+                player_data['champion_id'] = champions[ champion_name ]['id']
+                break
+
+    else:
+        # No game running, so set interval to 1 second.
+        log( Fore.RED + 'Couldn\'t fetch champions.' + Style.RESET_ALL  )
+        exit()
 
     return player_data
 
@@ -146,35 +177,28 @@ def get_player_data( game_data ):
 # Get the right skin id (wrong chroma id, no image)
 def get_proper_skinid( player_data ):
 
-    if player_data['champion_name']:
+    # Set up current champion info url
+    champion_url = CDN_URL_CHAMPION + player_data['champion_id'] + '.json'
 
-        # Set up current champion info url
-        champion_url = CDN_URL_JSON + sanitize( player_data['champion_name'] ) + '.json'
+    # Get champion info
+    response = requests.get( champion_url )
 
-        # Get champion info
-        response = requests.get( champion_url )
+    if response.ok and response.json():
 
-        if response.ok and response.json():
+        champion_data = response.json()
+        log( Fore.GREEN + 'Fetched champion info: ' + Style.RESET_ALL + player_data['champion_name'] )
 
-            champion_data = response.json()
-            log( Fore.GREEN + 'Fetched champion info: ' + Style.RESET_ALL + player_data['champion_name'] )
+        # Get detailed champ data
+        champion = champion_data['data'][ player_data['champion_id'] ]
 
-            # Get detailed champ data
-            champion = champion_data['data'][ sanitize( player_data['champion_name'] ) ]
-
-            # Loop all skins and check for match
-            for skin in champion['skins']:
-                if 'name' in skin and player_data['skin_name'] == skin['name']:
-                    player_data['skin_id'] = skin['num']
-                    log( Fore.GREEN + 'Found Skin ID: ' + Style.RESET_ALL + str( player_data['skin_id'] ) + ' ( ' + player_data['skin_name'] + ' )' )
-
-        else:
-            debug( player_data )
-            log( Fore.RED + 'Couldn\'t fetch champion info: ' + Style.RESET_ALL + 'Check data.json for more information.' )
+        # Loop all skins and check for match
+        for skin in champion['skins']:
+            if 'name' in skin and player_data['skin_name'] == skin['name']:
+                player_data['skin_id'] = skin['num']
+                log( Fore.GREEN + 'Found Skin ID: ' + Style.RESET_ALL + str( player_data['skin_id'] ) + ' ( ' + player_data['skin_name'] + ' )' )
 
     else:
-        debug( player_data )
-        log( Fore.RED + 'Couldn\'t fetch champion info: ' + Style.RESET_ALL + 'Champion name not set.' )
+        log( Fore.RED + 'Couldn\'t fetch champion info: ' + Style.RESET_ALL + 'Check data.json for more information.' )
 
     return player_data
 
@@ -182,36 +206,29 @@ def get_proper_skinid( player_data ):
 # Save Splash image to local folder
 def save_splash_image( player_data ):
 
-    # Only save image if champion name not empty
-    if player_data['champion_name']:
+    # Local image filename
+    player_data['image_filename'] = player_data['champion_id'] + '_' + str( player_data['skin_id'] ) + '.jpg'
+    player_data['image_path'] = IMAGE_FOLDER + player_data['image_filename']
 
-        # Local image filename
-        player_data['image_filename'] = sanitize( player_data['champion_name'] ) + '_' + str( player_data['skin_id'] ) + '.jpg'
-        player_data['image_path'] = IMAGE_FOLDER + player_data['image_filename']
+    # Remote Image URL
+    image_splash_url = CDN_URL_CHAMPION_IMAGE + player_data['image_filename']
 
-        # Remote Image URL
-        image_splash_url = CDN_URL + CDN_SPLASH + player_data['image_filename']
+    # Check if file exists
+    try:
+        img_file = open( player_data['image_path'] )
+        img_file.close()
+        log( Fore.GREEN + 'Image already exists.' + Style.RESET_ALL )
 
-        # Check if file exists
-        try:
-            img_file = open( player_data['image_path'] )
-            img_file.close()
-            log( Fore.GREEN + 'Image already exists.' + Style.RESET_ALL )
+    # No, so download and save
+    except Exception as e:
 
-        # No, so download and save
-        except Exception as e:
-
-            # Get remote image content
-            img = requests.get( image_splash_url ).content
-            # Open and write img file locally
-            img_file = open( player_data['image_path'], 'wb' )
-            img_file.write( img )
-            img_file.close()
-            log( Fore.GREEN + 'New image saved: ' + Style.RESET_ALL + player_data['image_filename'] )
-
-    else:
-        debug( player_data )
-        log( Fore.RED + 'Can\'t save image: ' + Style.RESET_ALL + 'Champion name not set.' )
+        # Get remote image content
+        img = requests.get( image_splash_url ).content
+        # Open and write img file locally
+        img_file = open( player_data['image_path'], 'wb' )
+        img_file.write( img )
+        img_file.close()
+        log( Fore.GREEN + 'New image saved: ' + Style.RESET_ALL + player_data['image_filename'] )
 
     return player_data
 
@@ -221,53 +238,33 @@ def update_html( player_data ) :
 
     html_data = ''
 
-    if player_data['champion_name']:
+    # Get template data
+    try:
+        template = open( 'template.html', 'r' )
+        html_data = template.read()
+        template.close()
 
-        # Get template data
-        try:
-            template = open( 'template.html', 'r' )
-            html_data = template.read()
-            template.close()
+    except Exception as e:
+        log( Fore.RED + 'Template file not found: ' + Style.RESET_ALL + 'Download the template file manually from the github repository.' )
+        exit()
 
-        except Exception as e:
-            log( Fore.RED + 'Template file not found: ' + Style.RESET_ALL + 'Download the template file manually from the github repository.' )
-            exit()
+    if html_data:
+        # Search and replace
+        # We have to search first, since we only need the matched group to be replaced.
+        search = re.search( r'url\((.*)\)', html_data )
+        html_data = re.sub( search.group(1), player_data['image_path'], html_data )
+        search = re.search( r'<div id="splash-content">(.*)</div>', html_data )
+        html_data = re.sub( search.group(1), player_data['champion_name'], html_data )
 
-        if html_data:
-            # Search and replace
-            # We have to search first, since we only need the matched group to be replaced.
-            search = re.search( r'url\((.*)\)', html_data )
-            html_data = re.sub( search.group(1), player_data['image_path'], html_data )
-            search = re.search( r'<div id="splash-content">(.*)</div>', html_data )
-            html_data = re.sub( search.group(1), player_data['champion_name'], html_data )
+        # Write new data to output file
+        stream = open( 'template.html', 'w+' )
+        stream.write( html_data )
+        stream.close()
 
-            # Write new data to output file
-            stream = open( 'template.html', 'w+' )
-            stream.write( html_data )
-            stream.close()
-
-            log( Fore.GREEN + 'HTML build and saved.' + Style.RESET_ALL )
-		
-        else:
-            debug( player_data )
-            log( Fore.RED + 'HTML not saved: ' + Style.RESET_ALL + ' Data is empty.' )
-
+        log( Fore.GREEN + 'HTML build and saved.' + Style.RESET_ALL )
+    
     else:
-        debug( player_data )
-        log( Fore.RED + 'HTML not saved: ' + Style.RESET_ALL + 'Champion name not set.' )
-
-
-# Sanitize string for api call and file name
-def sanitize( s ):
-
-    # Strip whitespaces start and end
-    s = str(s).strip()
-    # Remove all non-word characters (everything except numbers and letters)
-    s = re.sub(r"[^\w\s]", '', s)
-    # Replace all whitespaces
-    s = re.sub(r"\s+", '', s)
-
-    return s
+        log( Fore.RED + 'HTML not saved: ' + Style.RESET_ALL + ' Data is empty.' )
 
 
 # Print Status messages
