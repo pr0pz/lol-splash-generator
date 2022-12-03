@@ -1,8 +1,8 @@
 # __LoL Splash Generator__
 
-![HTML Template Preview](https://i.ibb.co/JcR3083/lol-splash-generator-template-preview.gif)
+![HTML Template Preview](https://i.ibb.co/gJ77CVx/lol-splash-generator-template-preview.jpg)
 
-*This is how the generated template looks like by default. Feel free to customize it :)*
+*This is how the generated template looks like by default ([Check out the animation](https://i.ibb.co/JcR3083/lol-splash-generator-template-preview.gif)).*
 \
 \
 \
