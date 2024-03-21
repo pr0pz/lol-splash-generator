@@ -15,7 +15,7 @@ requests.packages.urllib3.disable_warnings()
 Change these vars to match your settings
 """
 HTML_FILE = 'template.html'  # File that will be generated inside the folder of this script
-SUMMONER_NAME = 'pr0pz'  # If you change accounts, you must change the nick in here
+SUMMONER_NAME = 'aurelyon'  # If you change accounts, you must change the nick in here
 INTERVAL = 1  # Client check interval
 INTERVAL_LONG = 180
 
@@ -23,16 +23,19 @@ INTERVAL_LONG = 180
 Data Dragon Documentation: https://developer.riotgames.com/docs/lol#data-dragon
 """
 API_URL = 'https://127.0.0.1:2999/liveclientdata/allgamedata'
-LOL_VERSION = '12.22.1'
-CDN_URL = 'https://ddragon.leagueoflegends.com/cdn/' + LOL_VERSION
-# Champ info: https://cdn.communitydragon.org/{LOL_VERSION}/champion/{championName}
-# https://ddragon.leagueoflegends.com/cdn/12.22.1/data/en_US/champion/Nautilus.json
-CDN_URL_CHAMPION = CDN_URL + '/data/en_US/champion/'
-# Champ image: http://ddragon.leagueoflegends.com/cdn/img/champion/splash/{championName}_{skinNum}.jpg
-# http://ddragon.leagueoflegends.com/cdn/img/champion/splash/Nautilus_0.jpg
-CDN_URL_CHAMPION_IMAGE = 'https://ddragon.leagueoflegends.com/cdn/img/champion/splash/'
 IMAGE_FOLDER = 'img/'
 STATUS_MESSAGE = ''
+
+# Set the values of the global variables, used after checking the lol version
+def set_global_variables():
+    global CDN_URL, CDN_URL_CHAMPION, CDN_URL_CHAMPION_IMAGE
+    CDN_URL = 'https://ddragon.leagueoflegends.com/cdn/' + LOL_VERSION
+# Champ info: https://cdn.communitydragon.org/{LOL_VERSION}/champion/{championName}
+# https://ddragon.leagueoflegends.com/cdn/12.22.1/data/en_US/champion/Nautilus.json
+    CDN_URL_CHAMPION = CDN_URL + '/data/en_US/champion/'
+# Champ image: http://ddragon.leagueoflegends.com/cdn/img/champion/splash/{championName}_{skinNum}.jpg
+# http://ddragon.leagueoflegends.com/cdn/img/champion/splash/Nautilus_0.jpg
+    CDN_URL_CHAMPION_IMAGE = 'https://ddragon.leagueoflegends.com/cdn/img/champion/splash/'
 
 # Start function
 def start():
@@ -49,13 +52,10 @@ def start():
         if response.ok and response.json():
             request_data = response.json()
 
-            # Save if version differs
-            if LOL_VERSION != request_data[0]:
-                LOL_VERSION = request_data[0]
-                log( Fore.GREEN + 'Updated LoL version: ' + Style.RESET_ALL + LOL_VERSION )
-
-            else:
-                log( Fore.GREEN + 'Current LoL version: ' + Style.RESET_ALL + LOL_VERSION )
+            # Save current LoL version
+            LOL_VERSION = request_data[0]
+            log( Fore.GREEN + 'LoL version: ' + Style.RESET_ALL + LOL_VERSION )
+            set_global_variables()
 
     except requests.exceptions.RequestException as e:
         log( Fore.YELLOW + 'Couldn\'t fetch new version: ' + Style.RESET_ALL + 'Using version ' + LOL_VERSION )
